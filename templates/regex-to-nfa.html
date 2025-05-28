@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Regex to NFA</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <div class="container1">
+    <div class="header">
+      <h1>🔁 Regex to NFA Simulator</h1>
+      <p>Masukkan regular expression dan uji string apakah diterima oleh NFA.</p>
+    </div>
+
+    <div class="main-content">
+      <div class="form-group">
+        <label for="regex">Regular Expression:</label>
+        <input type="text" id="regex" placeholder="Contoh: (a|b)*abb">
+      </div>
+
+      <div class="form-group">
+        <label for="inputString">String untuk diuji:</label>
+        <input type="text" id="inputString" placeholder="Contoh: abb">
+      </div>
+
+      <div class="btn-container">
+        <button id="checkRegexBtn" class="btn-check">Uji String</button>
+      </div>
+
+      <div id="loading" style="display:none; text-align:center; margin-top:10px;">⏳ Memproses...</div>
+      <div id="result" class="result-container"></div>
+    </div>
+  </div>
+
+  <script>
+    document.getElementById('checkRegexBtn').addEventListener('click', async () => {
+      const regex = document.getElementById('regex').value.trim();
+      const inputStr = document.getElementById('inputString').value.trim();
+      const result = document.getElementById('result');
+      const loading = document.getElementById('loading');
+
+      if (!regex || inputStr === '') {
+        result.innerHTML = "Regex tidak boleh kosong dan string harus diisi (bisa string kosong).";
+        result.className = 'result-container result-not-equivalent show';
+        return;
+      }
+
+      result.innerHTML = '';
+      loading.style.display = 'block';
+
+      try {
+        const response = await fetch('/test_regex', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ regex, string: inputStr })
+        });
+
+        const data = await response.json();
+        loading.style.display = 'none';
+
+        if (!response.ok) {
+          throw new Error(data.error || 'Terjadi kesalahan');
+        }
+
+        result.innerHTML = data.accepted ? '✓ Diterima!' : '✗ Ditolak.';
+        result.className = `result-container ${data.accepted ? 'result-equivalent' : 'result-not-equivalent'} show`;
+
+      } catch (error) {
+        loading.style.display = 'none';
+        result.innerHTML = `Error: ${error.message}`;
+        result.className = 'result-container result-not-equivalent show';
+      }
+    });
+  </script>
+</body>
+</html>

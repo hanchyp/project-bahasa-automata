@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DFA & Automata Toolkit</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container-index">
+        <div class="header">
+            <h1>Automaton Toolkit</h1>
+            <p>A web-based tool for testing, minimizing, generating NFA from regular expressions and comparing two DFA.</p>
+        </div>
+        <div class="menu">
+            <a href="{{ url_for('dfa_string_test') }}" class="menu-card">
+                <span class="menu-icon">🧪</span>
+                <h3>DFA String Testing</h3>
+                <p>Define your DFA and test input strings to see if they are accepted or rejected.</p>
+            </a>
+            <a href="{{ url_for('regex_to_nfa_page') }}" class="menu-card">
+                <span class="menu-icon">🔄</span>
+                <h3>Regex to NFA</h3>
+                <p>Convert regular expressions into Non-deterministic Finite Automata and test strings against them.</p>
+            </a>
+            <a href="{{ url_for('dfa_minimization') }}" class="menu-card">
+                <span class="menu-icon">⚡</span>
+                <h3>DFA Minimization</h3>
+                <p>Minimize your DFA to reduce the number of states.</p>
+            </a>
+            <a href="{{ url_for('dfa_equivalence') }}" class="menu-card">
+                <span class="menu-icon">🔍</span>
+                <h3>DFA Equivalence</h3>
+                <p>Compare two DFAs to determine if they are equivalent.</p>
+            </a>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DFA Minimizer</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container1">
+        <div class="header">
+            <h1>🔄 DFA Minimizer</h1>
+            <p>Masukkan DFA untuk dikonversi menjadi DFA minimal</p>
+        </div>
+
+        <div class="main-content">
+            <div class="dfa-section">
+                <h2 class="dfa-title">Input DFA</h2>
+                
+                <div class="form-group">
+                    <label for="states">States:</label>
+                    <input type="text" id="states" placeholder="Contoh: q0 q1 q2">
+                    <div class="help-text">Pisahkan dengan spasi</div>
+                </div>
+
+                <div class="form-group">
+                    <label for="alphabet">Alphabet:</label>
+                    <input type="text" id="alphabet" placeholder="Contoh: 0 1">
+                    <div class="help-text">Pisahkan dengan spasi</div>
+                </div>
+
+                <div class="form-group">
+                    <label for="start">Start State:</label>
+                    <input type="text" id="start" placeholder="Contoh: q0">
+                </div>
+
+                <div class="form-group">
+                    <label for="final">Final States:</label>
+                    <input type="text" id="final" placeholder="Contoh: q1 q2">
+                    <div class="help-text">Pisahkan dengan spasi (kosongkan jika tidak ada)</div>
+                </div>
+
+                <div class="form-group">
+                    <label>Transition Functions:</label>
+                    <div id="transitions" class="transitions-container">
+                        <div class="help-text">Isi states dan alphabet terlebih dahulu</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="btn-container">
+                <button id="minimizeBtn" class="btn-check">
+                    Minimize DFA
+                </button>
+                <button id="clearBtn" class="btn-clear">
+                    Clear
+                </button>
+            </div>
+
+            <div id="result" class="result-container">
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function generateTransitions() {
+            const states = document.getElementById('states').value.trim().split(/\s+/).filter(s => s);
+            const alphabet = document.getElementById('alphabet').value.trim().split(/\s+/).filter(s => s);
+            const container = document.getElementById('transitions');
+            
+            if (states.length === 0 || alphabet.length === 0) {
+                container.innerHTML = '<div class="help-text">Isi states dan alphabet terlebih dahulu</div>';
+                return;
+            }
+            
+            container.innerHTML = '';
+            
+            states.forEach(state => {
+                alphabet.forEach(symbol => {
+                    const row = document.createElement('div');
+                    row.className = 'transition-row';
+                    row.innerHTML = `
+                        <input type="text" value="${state}" readonly>
+                        <div class="arrow">→ (${symbol})</div>
+                        <input type="text" id="trans_${state}_${symbol}" placeholder="Next state">
+                    `;
+                    container.appendChild(row);
+                });
+            });
+        }
+
+        ['states', 'alphabet'].forEach(id => {
+            document.getElementById(id).addEventListener('input', generateTransitions);
+        });
+
+        function collectDFA() {
+            const states = document.getElementById('states').value.trim().split(/\s+/).filter(s => s);
+            const alphabet = document.getElementById('alphabet').value.trim().split(/\s+/).filter(s => s);
+            const startState = document.getElementById('start').value.trim();
+            const finalStates = document.getElementById('final').value.trim().split(/\s+/).filter(s => s);
+            
+            const transitions = {};
+            states.forEach(state => {
+                alphabet.forEach(symbol => {
+                    const nextState = document.getElementById(`trans_${state}_${symbol}`)?.value.trim();
+                    const key = `${state},${symbol}`;
+                    transitions[key] = nextState || '';
+                });
+            });
+            
+            return {
+                states: states,
+                alphabet: alphabet,
+                transitions: transitions,
+                start_state: startState,
+                accept_states: finalStates
+            };
+        }
+
+        function validateDFA(dfa) {
+            if (dfa.states.length === 0) return 'States tidak boleh kosong';
+            if (dfa.alphabet.length === 0) return 'Alphabet tidak boleh kosong';
+            if (!dfa.start_state) return 'Start state tidak boleh kosong';
+            if (!dfa.states.includes(dfa.start_state)) return 'Start state harus ada dalam states';
+            
+            for (const finalState of dfa.accept_states) {
+                if (!dfa.states.includes(finalState)) {
+                    return `Final state '${finalState}' harus ada dalam states`;
+                }
+            }
+            
+            for (const state of dfa.states) {
+                for (const symbol of dfa.alphabet) {
+                    const key = `${state},${symbol}`;
+                    const nextState = dfa.transitions[key];
+                    if (!nextState) return `Transisi untuk ${state} dengan simbol ${symbol} tidak boleh kosong`;
+                    if (!dfa.states.includes(nextState)) {
+                        return `State tujuan '${nextState}' harus ada dalam states`;
+                    }
+                }
+            }
+            
+            return null;
+        }
+
+        function createTransitionTable(dfa, title) {
+            const states = dfa.states;
+            const alphabet = dfa.alphabet;
+            
+            let tableHTML = `
+                <h3>${title}</h3>
+                <div><strong>States:</strong> {${states.join(', ')}}</div>
+                <div><strong>Alphabet:</strong> {${alphabet.join(', ')}}</div>
+                <div><strong>Start State:</strong> ${dfa.start_state}</div>
+                <div><strong>Accept States:</strong> {${dfa.accept_states.join(', ')}}</div>
+                <table class="transition-table">
+                    <thead>
+                        <tr>
+                            <th>State</th>
+                            ${alphabet.map(symbol => `<th>${symbol}</th>`).join('')}
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            
+            states.forEach(state => {
+                tableHTML += `<tr><td><strong>${state}</strong></td>`;
+                alphabet.forEach(symbol => {
+                    const key = `${state},${symbol}`;
+                    const nextState = dfa.transitions[key] || '-';
+                    tableHTML += `<td>${nextState}</td>`;
+                });
+                tableHTML += '</tr>';
+            });
+            
+            tableHTML += '</tbody></table>';
+            return tableHTML;
+        }
+
+        function displayResult(data) {
+            const resultDiv = document.getElementById('result');
+            
+            if (data.error) {
+                resultDiv.innerHTML = `
+                    <div style="text-align: center;">
+                        <h3>❌ Error</h3>
+                        <p>${data.error}</p>
+                    </div>
+                `;
+                resultDiv.className = 'result-container result-error show';
+                return;
+            }
+            
+            const original = data.original;
+            const minimal = data.minimal;
+            
+            // Create partition mapping display
+            let partitionHTML = '';
+            if (minimal.partition_mapping) {
+                partitionHTML = `
+                    <div class="partition-info">
+                        <h4>Pemetaan Partisi:</h4>
+                        ${Object.entries(minimal.partition_mapping).map(([rep, states]) => 
+                            `<div class="partition-item">
+                                <strong>${rep}</strong> = {${states.join(', ')}}
+                            </div>`
+                        ).join('')}
+                    </div>
+                `;
+            }
+            
+            resultDiv.innerHTML = `
+                <div style="text-align: center;">
+                    <h3>✅ Hasil Minimasi DFA</h3>
+                    <p>DFA berhasil diminimasi dari <strong>${original.states.length}</strong> state menjadi <strong>${minimal.states.length}</strong> state</p>
+                </div>
+                
+                <div class="dfa-display">
+                    <div class="dfa-box">
+                        ${createTransitionTable(original, 'DFA Asli')}
+                    </div>
+                    <div class="dfa-box">
+                        ${createTransitionTable(minimal, 'DFA Minimal')}
+                        ${partitionHTML}
+                    </div>
+                </div>
+            `;
+            
+            resultDiv.className = 'result-container result-success show';
+        }
+
+        document.getElementById('minimizeBtn').addEventListener('click', async () => {
+            const btn = document.getElementById('minimizeBtn');
+            const result = document.getElementById('result');
+            
+            btn.disabled = true;
+            btn.innerHTML = 'Minimizing... <span class="loading"></span>';
+            result.classList.remove('show');
+            
+            try {
+                const dfa = collectDFA();
+                
+                const error = validateDFA(dfa);
+                if (error) {
+                    throw new Error(error);
+                }
+                
+                const response = await fetch('/minimize', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(dfa)
+                });
+                
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.error || 'Terjadi kesalahan');
+                }
+                
+                displayResult(data);
+                
+            } catch (error) {
+                result.innerHTML = `
+                    <div style="text-align: center;">
+                        <h3>❌ Error</h3>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+                result.className = 'result-container result-error show';
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = 'Minimize DFA';
+            }
+        });
+
+        document.getElementById('clearBtn').addEventListener('click', () => {
+            document.getElementById('states').value = '';
+            document.getElementById('alphabet').value = '';
+            document.getElementById('start').value = '';
+            document.getElementById('final').value = '';
+            document.getElementById('transitions').innerHTML = '<div class="help-text">Isi states dan alphabet terlebih dahulu</div>';
+            document.getElementById('result').innerHTML = '';
+            document.getElementById('result').classList.remove('show');
+        });
+    </script>
+</body>
+</html>

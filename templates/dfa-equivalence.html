@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DFA Equivalence Checker</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container1">
+        <div class="header">
+            <h1>🔍 DFA Equivalence Checker</h1>
+            <p>Compare two DFAs to determine if they are equivalent.</p>
+        </div>
+
+        <div class="main-content">
+            <div class="dfa-section">
+                <h2 class="dfa-title">DFA 1</h2>
+                
+                <div class="form-group">
+                    <label for="states1">States:</label>
+                    <input type="text" id="states1" placeholder="Contoh: q0 q1 q2">
+                    <div class="help-text">Pisahkan dengan spasi</div>
+                </div>
+
+                <div class="form-group">
+                    <label for="alphabet1">Alphabet:</label>
+                    <input type="text" id="alphabet1" placeholder="Contoh: a b">
+                    <div class="help-text">Pisahkan dengan spasi</div>
+                </div>
+
+                <div class="form-group">
+                    <label for="start1">Start State:</label>
+                    <input type="text" id="start1" placeholder="Contoh: q0">
+                </div>
+
+                <div class="form-group">
+                    <label for="final1">Final States:</label>
+                    <input type="text" id="final1" placeholder="Contoh: q1 q2">
+                    <div class="help-text">Pisahkan dengan spasi</div>
+                </div>
+
+                <div class="form-group">
+                    <label>Transition Functions:</label>
+                    <div id="transitions1" class="transitions-container">
+                        <div class="help-text">Isi states dan alphabet terlebih dahulu</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="dfa-section">
+                <h2 class="dfa-title">DFA 2</h2>
+                
+                <div class="form-group">
+                    <label for="states2">States:</label>
+                    <input type="text" id="states2" placeholder="Contoh: p0 p1 p2">
+                    <div class="help-text">Pisahkan dengan spasi</div>
+                </div>
+
+                <div class="form-group">
+                    <label for="alphabet2">Alphabet:</label>
+                    <input type="text" id="alphabet2" placeholder="Contoh: a b">
+                    <div class="help-text">Pisahkan dengan spasi</div>
+                </div>
+
+                <div class="form-group">
+                    <label for="start2">Start State:</label>
+                    <input type="text" id="start2" placeholder="Contoh: p0">
+                </div>
+
+                <div class="form-group">
+                    <label for="final2">Final States:</label>
+                    <input type="text" id="final2" placeholder="Contoh: p1 p2">
+                    <div class="help-text">Pisahkan dengan spasi</div>
+                </div>
+
+                <div class="form-group">
+                    <label>Transition Functions:</label>
+                    <div id="transitions2" class="transitions-container">
+                        <div class="help-text">Isi states dan alphabet terlebih dahulu</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="btn-container">
+                <button id="checkBtn" class="btn-check">
+                    Check Equivalence
+                </button>
+            </div>
+
+            <div id="result" class="result-container">
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function generateTransitions(dfaNum) {
+            const states = document.getElementById(`states${dfaNum}`).value.trim().split(/\s+/).filter(s => s);
+            const alphabet = document.getElementById(`alphabet${dfaNum}`).value.trim().split(/\s+/).filter(s => s);
+            const container = document.getElementById(`transitions${dfaNum}`);
+            
+            if (states.length === 0 || alphabet.length === 0) {
+                container.innerHTML = '<div class="help-text">Isi states dan alphabet terlebih dahulu</div>';
+                return;
+            }
+            
+            container.innerHTML = '';
+            
+            states.forEach(state => {
+                alphabet.forEach(symbol => {
+                    const row = document.createElement('div');
+                    row.className = 'transition-row';
+                    row.innerHTML = `
+                        <input type="text" value="${state}" readonly>
+                        <div class="arrow">→ (${symbol})</div>
+                        <input type="text" id="trans_${dfaNum}_${state}_${symbol}" placeholder="Next state">
+                    `;
+                    container.appendChild(row);
+                });
+            });
+        }
+
+        ['states1', 'alphabet1', 'states2', 'alphabet2'].forEach(id => {
+            document.getElementById(id).addEventListener('input', () => {
+                const dfaNum = id.slice(-1);
+                generateTransitions(dfaNum);
+            });
+        });
+
+        function collectDFA(dfaNum) {
+            const states = document.getElementById(`states${dfaNum}`).value.trim().split(/\s+/).filter(s => s);
+            const alphabet = document.getElementById(`alphabet${dfaNum}`).value.trim().split(/\s+/).filter(s => s);
+            const startState = document.getElementById(`start${dfaNum}`).value.trim();
+            const finalStates = document.getElementById(`final${dfaNum}`).value.trim().split(/\s+/).filter(s => s);
+            
+            const transitions = {};
+            states.forEach(state => {
+                transitions[state] = {};
+                alphabet.forEach(symbol => {
+                    const nextState = document.getElementById(`trans_${dfaNum}_${state}_${symbol}`).value.trim();
+                    transitions[state][symbol] = nextState;
+                });
+            });
+            
+            return {
+                states: states,
+                alphabet: alphabet,
+                start_state: startState,
+                final_state: finalStates,
+                transitions: transitions
+            };
+        }
+
+        function validateDFA(dfa, dfaName) {
+            if (dfa.states.length === 0) return `${dfaName}: States tidak boleh kosong`;
+            if (dfa.alphabet.length === 0) return `${dfaName}: Alphabet tidak boleh kosong`;
+            if (!dfa.start_state) return `${dfaName}: Start state tidak boleh kosong`;
+            if (!dfa.states.includes(dfa.start_state)) return `${dfaName}: Start state harus ada dalam states`;
+            
+            for (const finalState of dfa.final_state) {
+                if (!dfa.states.includes(finalState)) {
+                    return `${dfaName}: Final state '${finalState}' harus ada dalam states`;
+                }
+            }
+            
+            for (const state of dfa.states) {
+                for (const symbol of dfa.alphabet) {
+                    const nextState = dfa.transitions[state][symbol];
+                    if (!nextState) return `${dfaName}: Transisi untuk ${state} dengan simbol ${symbol} tidak boleh kosong`;
+                    if (!dfa.states.includes(nextState)) {
+                        return `${dfaName}: State tujuan '${nextState}' harus ada dalam states`;
+                    }
+                }
+            }
+            
+            return null;
+        }
+
+        document.getElementById('checkBtn').addEventListener('click', async () => {
+            const btn = document.getElementById('checkBtn');
+            const result = document.getElementById('result');
+            
+            btn.disabled = true;
+            btn.innerHTML = 'Checking... <span class="loading"></span>';
+            result.classList.remove('show');
+            
+            try {
+                const dfa1 = collectDFA('1');
+                const dfa2 = collectDFA('2');
+                
+                // Validate DFAs
+                const error1 = validateDFA(dfa1, 'DFA 1');
+                const error2 = validateDFA(dfa2, 'DFA 2');
+                
+                if (error1 || error2) {
+                    throw new Error(error1 || error2);
+                }
+                
+                const response = await fetch('/check_equivalence', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ dfa1, dfa2 })
+                });
+                
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.error || 'Terjadi kesalahan');
+                }
+                
+                result.innerHTML = data.message;
+                result.className = `result-container ${data.equivalent ? 'result-equivalent' : 'result-not-equivalent'} show`;
+                
+            } catch (error) {
+                result.innerHTML = `Error: ${error.message}`;
+                result.className = 'result-container result-not-equivalent show';
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = 'Check Equivalence';
+            }
+        });
+    </script>
+</body>
+</html>
