@@ -291,31 +291,6 @@ def simulate_dfa(dfa, input_string):
 
     return current in dfa['final_state']
 
-def create_dfa_text_representation(dfa):
-    """
-    Membuat representasi teks DFA dengan huruf dan panah
-    """
-    states = dfa['states']
-    alphabet = dfa['alphabet']
-    start_state = dfa['start_state']
-    final_states = dfa['final_state']
-    transitions = dfa['transitions']
-    
-    lines = []
-    lines.append("DFA Representation:")
-    lines.append(f"States: {', '.join(states)}")
-    lines.append(f"Alphabet: {', '.join(alphabet)}")
-    lines.append(f"Start State: {start_state}")
-    lines.append(f"Final States: {', '.join(final_states)}")
-    lines.append("Transitions:")
-    
-    for state in states:
-        for symbol in alphabet:
-            next_state = transitions.get(state, {}).get(symbol)
-            if next_state:
-                lines.append(f"{state} --{symbol}--> {next_state}")
-    
-    return "\n".join(lines)
 
 @app.route('/check_string', methods=['POST'])
 def check_string():
@@ -330,15 +305,11 @@ def check_string():
         # Simulasi DFA dengan langkah-langkah detail
         simulation_result = simulate_dfa_with_steps(dfa, input_string)
         
-        # Buat representasi teks DFA
-        dfa_text = create_dfa_text_representation(dfa)
-        
         return jsonify({
             'accepted': simulation_result['accepted'],
             'message': f'String "{input_string}" {"diterima" if simulation_result["accepted"] else "ditolak"} oleh DFA',
             'steps': simulation_result['steps'],
             'error': simulation_result.get('error'),
-            'dfa_text': dfa_text
         }), 200
 
     except Exception as e:
