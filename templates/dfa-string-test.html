@@ -75,12 +75,6 @@
             </tbody>
           </table>
         </div>
-
-        <!-- Visualisasi DFA -->
-        <div id="dfa-visualization-container">
-          <h3>Visualisasi DFA</h3>
-          <img id="dfa-image" alt="DFA Visualization" />
-        </div>
       </div>
     </div>
   </div>
@@ -230,71 +224,28 @@
 
     // Fungsi untuk menampilkan langkah-langkah simulasi
     function displaySimulationSteps(steps, error = null) {
-    const container = document.getElementById('simulation-steps');
-    container.innerHTML = '';
+      const container = document.getElementById('simulation-steps');
+      container.innerHTML = '';
 
-    if (error) {
+      if (error) {
         container.innerHTML = `<div class="step-indicator" style="background-color: #f8d7da; color: #721c24;">
-        <strong>Kesalahan:</strong> ${error}
-        </div>`;
+          <strong>Kesalahan:</strong> ${error}
+          </div>`;
         return;
-    }
+      }
 
-    steps.forEach((step, index) => {
+      steps.forEach((step, index) => {
         const stepDiv = document.createElement('div');
         stepDiv.className = 'step-indicator';
         
         if (step.action === 'Start') {
-        stepDiv.innerHTML = `<strong>Langkah ${step.step}:</strong> Mulai dari status <strong>${step.currentState}</strong>`;
+          stepDiv.innerHTML = `<strong>Langkah ${step.step}:</strong> Mulai dari status <strong>${step.currentState}</strong>`;
         } else {
-        stepDiv.innerHTML = `<strong>Langkah ${step.step}:</strong> ${step.action.replace('Read', 'Baca')} → Transisi dari <strong>${step.currentState}</strong> ke <strong>${step.nextState}</strong>`;
+          stepDiv.innerHTML = `<strong>Langkah ${step.step}:</strong> ${step.action.replace('Read', 'Baca')} → Transisi dari <strong>${step.currentState}</strong> ke <strong>${step.nextState}</strong>`;
         }
         
         container.appendChild(stepDiv);
-    });
-    }
-    // Fungsi untuk visualisasi DFA dengan request ke backend
-    async function visualizeDFA(dfa) {
-      try {
-        const response = await fetch('http://localhost:5000/visualize_dfa', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ dfa: dfa })
-        });
-
-        const data = await response.json();
-        if (data.error) {
-          throw new Error(data.error);
-        }
-
-        const imgElement = document.getElementById('dfa-image');
-        imgElement.src = `data:image/png;base64,${data.image}`;
-        imgElement.style.display = 'block';
-        
-      } catch (error) {
-        console.error('Visualization error:', error);
-        const imgElement = document.getElementById('dfa-image');
-        imgElement.style.display = 'none';
-        const errorDiv = document.createElement('div');
-        errorDiv.style.cssText = `
-          width: 400px; 
-          height: 300px; 
-          background: #fee2e2; 
-          border: 2px solid #991b1b; 
-          display: flex; 
-          align-items: center; 
-          justify-content: center; 
-          margin: 0 auto; 
-          border-radius: 8px;
-          font-family: monospace;
-          color: #991b1b;
-          text-align: center;
-        `;
-        errorDiv.innerHTML = `Gagal memuat visualisasi:<br>${error.message}`;
-        imgElement.parentNode.insertBefore(errorDiv, imgElement);
-      }
+      });
     }
 
     // Event listener untuk tombol check
@@ -302,13 +253,11 @@
       const btn = document.getElementById("checkBtn");
       const result = document.getElementById("result");
       const tableContainer = document.getElementById("transition-table-container");
-      const visualContainer = document.getElementById("dfa-visualization-container");
 
       btn.disabled = true;
       btn.innerHTML = 'Checking... <span class="loading"></span>';
       result.classList.remove('show');
       tableContainer.classList.remove('show');
-      visualContainer.classList.remove('show');
 
       try {
         const dfa = collectDFA();
@@ -318,21 +267,30 @@
           throw new Error('Mohon isi states, alphabet, dan start state dengan benar');
         }
 
-        const simulation = simulateDFAWithSteps(dfa, input_string);
+        // Kirim permintaan ke backend
+        const response = await fetch('http://127.0.0.1:8080/check_string', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ dfa: dfa, input_string: input_string })
+        });
 
-        result.innerHTML = simulation.error 
-          ? `Error: ${simulation.error}`
-          : `String "${input_string}" ${simulation.accepted ? 'diterima' : 'ditolak'} oleh DFA`;
-        result.className = `result-container ${simulation.accepted ? 'result-equivalent' : 'result-not-equivalent'} show`;
-
-        createTransitionTable(dfa);
-        displaySimulationSteps(simulation.steps, simulation.error);
-        tableContainer.classList.add('show');
-
-        if (simulation.accepted) {
-          await visualizeDFA(dfa);
-          visualContainer.classList.add('show');
+        const data = await response.json();
+        if (data.error) {
+          throw new Error(data.error);
         }
+
+        // Tampilkan hasil simulasi
+        result.innerHTML = data.error 
+          ? `Error: ${data.error}`
+          : data.message;
+        result.className = `result-container ${data.accepted ? 'result-equivalent' : 'result-not-equivalent'} show`;
+
+        // Tampilkan tabel transisi dan langkah-langkah simulasi
+        createTransitionTable(dfa);
+        displaySimulationSteps(data.steps, data.error);
+        tableContainer.classList.add('show');
 
       } catch (error) {
         result.innerHTML = `Error: ${error.message}`;

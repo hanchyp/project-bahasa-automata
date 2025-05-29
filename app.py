@@ -217,29 +217,6 @@ def check_equivalence():
 
 
 # ======== DFA STRING TEST =========
-@app.route('/check_string', methods=['POST'])
-def check_string():
-    try:
-        data = request.get_json()
-        dfa = data.get('dfa')
-        input_string = data.get('input_string')
-
-        if not dfa or input_string is None:
-            return jsonify({'error': 'Data tidak lengkap'}), 400
-
-        # Simulasi DFA dengan langkah-langkah detail
-        simulation_result = simulate_dfa_with_steps(dfa, input_string)
-        
-        return jsonify({
-            'accepted': simulation_result['accepted'],
-            'message': f'String "{input_string}" {"diterima" if simulation_result["accepted"] else "ditolak"} oleh DFA',
-            'steps': simulation_result['steps'],
-            'error': simulation_result.get('error')
-        }), 200
-
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
 def simulate_dfa_with_steps(dfa, input_string):
     """
     Simulasi DFA dengan tracking setiap langkah
@@ -314,96 +291,26 @@ def simulate_dfa(dfa, input_string):
 
     return current in dfa['final_state']
 
-def draw_dfa(dfa):
-    """
-    Menggambar visualisasi DFA menggunakan NetworkX dan Matplotlib
-    """
-    G = nx.MultiDiGraph()
-
-    states = dfa['states']
-    alphabet = dfa['alphabet']
-    start_state = dfa['start_state']
-    final_states = dfa['final_state']
-    transitions = dfa['transitions']
-
-    # Tambahkan nodes
-    for state in states:
-        G.add_node(state)
-
-    # Tambahkan edges dengan label
-    for state in states:
-        for symbol in alphabet:
-            next_state = transitions.get(state, {}).get(symbol)
-            if next_state:
-                G.add_edge(state, next_state, label=symbol)
-
-    # Layout untuk positioning nodes
-    pos = nx.spring_layout(G, k=2, iterations=50)
-    
-    # Buat figure
-    plt.figure(figsize=(10, 8))
-    plt.clf()
-    
-    # Warna nodes: hijau untuk final states, biru untuk yang lain
-    node_colors = ['lightgreen' if s in final_states else 'lightblue' for s in G.nodes]
-    
-    # Gambar nodes
-    nx.draw_networkx_nodes(G, pos, node_color=node_colors, node_size=2000, alpha=0.9)
-    
-    # Gambar labels untuk nodes
-    nx.draw_networkx_labels(G, pos, font_size=12, font_weight='bold')
-
-    # Tandai start state dengan panah dari luar
-    start_pos = pos[start_state]
-    plt.annotate("START", xy=start_pos, xytext=(start_pos[0]-0.3, start_pos[1]+0.2),
-                 arrowprops=dict(facecolor='red', shrink=0.05, width=2),
-                 fontsize=10, fontweight='bold', color='red')
-
-    # Gabungkan edge labels jika ada multiple symbols pada edge yang sama
-    edge_labels = {}
-    for u, v, data in G.edges(data=True):
-        edge_key = (u, v)
-        if edge_key in edge_labels:
-            edge_labels[edge_key] += ',' + data['label']
-        else:
-            edge_labels[edge_key] = data['label']
-
-    # Gambar edges
-    nx.draw_networkx_edges(G, pos, connectionstyle='arc3, rad=0.1', 
-                          arrowsize=20, edge_color='gray', width=1.5)
-    
-    # Gambar edge labels
-    nx.draw_networkx_edge_labels(G, pos, edge_labels=edge_labels, font_size=10)
-
-    # Tambahkan double circle untuk final states
-    for state in final_states:
-        if state in pos:
-            circle = plt.Circle(pos[state], 0.15, fill=False, color='green', linewidth=3)
-            plt.gca().add_patch(circle)
-
-    plt.title("DFA Visualization", fontsize=16, fontweight='bold')
-    plt.axis('off')
-    plt.tight_layout()
-
-    # Konversi ke base64
-    buf = io.BytesIO()
-    plt.savefig(buf, format='png', dpi=150, bbox_inches='tight')
-    plt.close()
-    buf.seek(0)
-    img_base64 = base64.b64encode(buf.read()).decode('utf-8')
-    return img_base64
-
-@app.route('/visualize_dfa', methods=['POST'])
-def visualize_dfa():
+@app.route('/check_string', methods=['POST'])
+def check_string():
     try:
         data = request.get_json()
         dfa = data.get('dfa')
-        if not dfa:
-            return jsonify({'error': 'DFA data tidak ditemukan'}), 400
+        input_string = data.get('input_string')
 
-        img_base64 = draw_dfa(dfa)
-        return jsonify({'image': img_base64})
-    
+        if not dfa or input_string is None:
+            return jsonify({'error': 'Data tidak lengkap'}), 400
+
+        # Simulasi DFA dengan langkah-langkah detail
+        simulation_result = simulate_dfa_with_steps(dfa, input_string)
+        
+        return jsonify({
+            'accepted': simulation_result['accepted'],
+            'message': f'String "{input_string}" {"diterima" if simulation_result["accepted"] else "ditolak"} oleh DFA',
+            'steps': simulation_result['steps'],
+            'error': simulation_result.get('error')
+        }), 200
+
     except Exception as e:
         return jsonify({'error': str(e)}), 500
     
