@@ -100,7 +100,7 @@
           row.innerHTML = `
             <input type="text" value="${state}" readonly>
             <div class="arrow">→ (${symbol})</div>
-            <input type="text" id="trans_${state}_${symbol}" placeholder="Next state">
+            <input type="text" id="trans_${state}_${symbol}" placeholder="Next state" required>
           `;
           container.appendChild(row);
         });
@@ -119,12 +119,41 @@
       const start_state = document.getElementById("start").value.trim();
       const final_state = document.getElementById("final").value.trim().split(/\s+/).filter(s => s);
 
+      // Validasi states dan alphabet
+      if (states.length === 0) {
+        throw new Error("States tidak boleh kosong");
+      }
+      if (alphabet.length === 0) {
+        throw new Error("Alphabet tidak boleh kosong");
+      }
+
+      // Validasi start_state
+      if (!start_state || !states.includes(start_state)) {
+        throw new Error("Start state tidak valid atau tidak ada dalam daftar states");
+      }
+
+      // Validasi final_state
+      if (final_state.length > 0) {
+        final_state.forEach(state => {
+          if (!states.includes(state)) {
+            throw new Error(`Final state '${state}' tidak ada dalam daftar states`);
+          }
+        });
+      }
+
+      // Kumpulkan transisi
       const transitions = {};
       states.forEach(state => {
         transitions[state] = {};
         alphabet.forEach(symbol => {
           const next = document.getElementById(`trans_${state}_${symbol}`).value.trim();
-          if (next) transitions[state][symbol] = next;
+          if (!next) {
+            throw new Error(`Transisi dari state '${state}' dengan symbol '${symbol}' tidak boleh kosong`);
+          }
+          if (!states.includes(next)) {
+            throw new Error(`Transisi dari state '${state}' dengan symbol '${symbol}' mengarah ke state tidak valid: '${next}'`);
+          }
+          transitions[state][symbol] = next;
         });
       });
 
@@ -212,9 +241,7 @@
         row.innerHTML = `<td><strong>${stateLabel}</strong></td>`;
         
         dfa.alphabet.forEach(symbol => {
-          const nextState = dfa.transitions[state] && dfa.transitions[state][symbol] 
-            ? dfa.transitions[state][symbol] 
-            : '-';
+          const nextState = dfa.transitions[state][symbol] || '-';
           row.innerHTML += `<td>${nextState}</td>`;
         });
         
@@ -234,19 +261,33 @@
         return;
       }
 
-      steps.forEach((step, index) => {
-        const stepDiv = document.createElement('div');
-        stepDiv.className = 'step-indicator';
-        
-        if (step.action === 'Start') {
-          stepDiv.innerHTML = `<strong>Langkah ${step.step}:</strong> Mulai dari status <strong>${step.currentState}</strong>`;
-        } else {
-          stepDiv.innerHTML = `<strong>Langkah ${step.step}:</strong> ${step.action.replace('Read', 'Baca')} → Transisi dari <strong>${step.currentState}</strong> ke <strong>${step.nextState}</strong>`;
-        }
-        
-        container.appendChild(stepDiv);
-      });
+      if (!steps || !Array.isArray(steps) || steps.length === 0) {
+        container.innerHTML = `<div class="step-indicator" style="background-color: #f8d7da; color: #721c24;">
+          <strong>Kesalahan:</strong> Tidak ada langkah simulasi yang tersedia
+          </div>`;
+        return;
+      }
+
+  steps.forEach((step, index) => {
+    const stepDiv = document.createElement('div');
+    stepDiv.className = 'step-indicator';
+
+    // Use correct property names from Python backend
+    const currentState = step.current_state || 'undefined';
+    const nextState = step.next_state || 'undefined';
+    const action = step.action || 'undefined';
+    const stepNum = step.step !== undefined ? step.step : index;
+    const symbol = step.symbol || '';
+
+    if (action === 'Start') {
+      stepDiv.innerHTML = `<strong>Langkah ${stepNum}:</strong> Mulai dari status <strong>${currentState}</strong>`;
+    } else {
+      stepDiv.innerHTML = `<strong>Langkah ${stepNum}:</strong> ${action.replace('Read', 'Baca')} → Transisi dari <strong>${currentState}</strong> ke <strong>${nextState}</strong>`;
     }
+
+    container.appendChild(stepDiv);
+  });
+}
 
     // Event listener untuk tombol check
     document.getElementById("checkBtn").addEventListener("click", async () => {
@@ -267,6 +308,10 @@
           throw new Error('Mohon isi states, alphabet, dan start state dengan benar');
         }
 
+        if (!input_string) {
+          throw new Error('Input string tidak boleh kosong');
+        }
+
         // Kirim permintaan ke backend
         const response = await fetch('http://127.0.0.1:8080/check_string', {
           method: 'POST',
@@ -282,9 +327,7 @@
         }
 
         // Tampilkan hasil simulasi
-        result.innerHTML = data.error 
-          ? `Error: ${data.error}`
-          : data.message;
+        result.innerHTML = data.message;
         result.className = `result-container ${data.accepted ? 'result-equivalent' : 'result-not-equivalent'} show`;
 
         // Tampilkan tabel transisi dan langkah-langkah simulasi
@@ -295,6 +338,8 @@
       } catch (error) {
         result.innerHTML = `Error: ${error.message}`;
         result.className = 'result-container result-not-equivalent show';
+        displaySimulationSteps([], error.message);
+        tableContainer.classList.add('show');
       } finally {
         btn.disabled = false;
         btn.innerHTML = 'Check String';
